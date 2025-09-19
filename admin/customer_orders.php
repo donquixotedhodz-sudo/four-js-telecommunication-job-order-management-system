@@ -1836,9 +1836,9 @@ function printOrder(orderId) {
                 <body>
                     <div class="header">
                          <div style="display: flex; align-items: center; margin-bottom: 10px; padding-left: 20px;">
-                             <img src="images/logo.png" alt="FourJs Logo" style="height: 80px; width: auto; margin-right: 15px;">
+                             <img src="images/logo.png" alt="Four J's Logo" style="height: 80px; width: auto; margin-right: 15px;">
                              <div style="flex: 1; text-align: center; margin-right: 95px;">
-                                 <div class="company-name">FourJs Aircon Services</div>
+                                 <div class="company-name">Four J's Aircon Services</div>
                                  <div>Professional Aircon Installation & Repair</div>
                                  <div class="receipt-title" style="margin-top: 5px; font-size: 18px; font-weight: bold;">SERVICE ORDER RECEIPT</div>
                              </div>
