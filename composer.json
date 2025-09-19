@@ -1,0 +1,8 @@
+{
+    "name": "fourjs/ticket-system",
+    "description": "Ticket Management System",
+    "type": "project",
+    "require": {
+        "phpmailer/phpmailer": "^6.10"
+    }
+}
