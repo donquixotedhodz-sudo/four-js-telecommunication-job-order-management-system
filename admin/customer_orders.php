@@ -1910,7 +1910,7 @@ function printOrder(orderId) {
                     </div>
                     
                     <div class="footer">
-                        <p>Thank you for choosing FourJs Aircon Services!</p>
+                        <p>Thank you for choosing Four J's Aircon Services!</p>
                         <p>For inquiries, please contact us.</p>
                     </div>
                 </body>
@@ -2128,7 +2128,7 @@ function printSelectedOrders() {
                 </div>
                 
                 <div class="footer">
-                    <p>Thank you for choosing FourJs Aircon Services!</p>
+                    <p>Thank you for choosing Four J's' Aircon Services!</p>
                     <p>For inquiries, please contact us.</p>
                 </div>
             </body>
