@@ -144,6 +144,7 @@ try {
     <div class="mb-4">
         <p class="text-muted mb-0">
             <i class="fas fa-phone text-primary me-1"></i><?= htmlspecialchars($customer['phone']) ?> <br>
+            <i class="fas fa-envelope text-success me-1"></i><?= htmlspecialchars($customer['email']) ?> <br>
             <i class="fas fa-map-marker-alt text-danger me-1"></i><?= htmlspecialchars($customer['address']) ?>
         </p>
     </div>
@@ -301,13 +302,13 @@ try {
                                                 <i class="fas fa-print text-white"></i>
                                             </button>
                                             <?php if ($order['status'] === 'pending'): ?>
-                                            <a href="controller/update-status.php?status=in_progress&id=<?= $order['id'] ?>&customer_id=<?= $customer['id'] ?>" class="btn btn-sm btn-success" data-bs-toggle="tooltip" title="Accept Order">
-                                                <i class="fas fa-check"></i>
+                                            <a href="controller/update-status.php?status=in_progress&id=<?= $order['id'] ?>&customer_id=<?= $customer['id'] ?>" class="btn btn-sm btn-success status-update-btn" data-bs-toggle="tooltip" title="Accept Order">
+                                                <span class="btn-text"><i class="fas fa-check"></i></span>
                                             </a>
                                             <?php endif; ?>
                                             <?php if ($order['status'] === 'in_progress'): ?>
-                                            <a href="controller/update-status.php?status=completed&id=<?= $order['id'] ?>&customer_id=<?= $customer['id'] ?>" class="btn btn-sm btn-primary" data-bs-toggle="tooltip" title="Mark as Completed">
-                                                <i class="fas fa-check-double"></i>
+                                            <a href="controller/update-status.php?status=completed&id=<?= $order['id'] ?>&customer_id=<?= $customer['id'] ?>" class="btn btn-sm btn-primary status-update-btn" data-bs-toggle="tooltip" title="Mark as Completed">
+                                                <span class="btn-text"><i class="fas fa-check-double"></i></span>
                                             </a>
                                             <?php endif; ?>
                                             <button 
@@ -318,8 +319,8 @@ try {
                                                 title="Edit Order">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <a href="controller/update-status.php?status=cancelled&id=<?= $order['id'] ?>&customer_id=<?= $customer['id'] ?>" class="btn btn-sm btn-danger" data-bs-toggle="tooltip" title="Cancel Order" onclick="return confirm('Are you sure you want to cancel this order?');">
-                                                <i class="fas fa-trash"></i>
+                                            <a href="controller/update-status.php?status=cancelled&id=<?= $order['id'] ?>&customer_id=<?= $customer['id'] ?>" class="btn btn-sm btn-danger status-update-btn" data-bs-toggle="tooltip" title="Cancel Order" onclick="return confirm('Are you sure you want to cancel this order?');">
+                                                <span class="btn-text"><i class="fas fa-trash"></i></span>
                                             </a>
                                         </div>
                                     </td>
@@ -853,6 +854,10 @@ try {
                                 <div class="mb-2">
                                     <label class="form-label text-muted">Phone</label>
                                     <p class="mb-0" id="view_customer_phone">-</p>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label text-muted">Email</label>
+                                    <p class="mb-0" id="view_customer_email">-</p>
                                 </div>
                                 <div class="mb-0">
                                     <label class="form-label text-muted">Address</label>
@@ -1570,6 +1575,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Populate customer information
                         document.getElementById('view_customer_name').textContent = order.customer_name || '-';
                         document.getElementById('view_customer_phone').textContent = order.customer_phone || '-';
+                        document.getElementById('view_customer_email').textContent = order.customer_email || '-';
                         document.getElementById('view_customer_address').textContent = order.customer_address || '-';
                         
                         // Populate service information
@@ -2190,7 +2196,92 @@ document.addEventListener('DOMContentLoaded', function() {
         }
      });
 });
+
+// Function to handle status update with loading animation
+function updateStatusWithLoading(button, url) {
+    // Add loading class
+    button.classList.add('btn-loading');
+    
+    // Store original content
+    const originalContent = button.innerHTML;
+    
+    // Add loading text for screen readers
+    button.setAttribute('aria-label', 'Updating status...');
+    
+    // Navigate to the URL after a short delay to show the loading animation
+    setTimeout(() => {
+        window.location.href = url;
+    }, 300);
+}
+
+// Add click handlers to all status update buttons
+document.querySelectorAll('.status-update-btn').forEach(button => {
+    button.addEventListener('click', function(e) {
+        // Check if this is a cancel button with confirmation
+        if (this.classList.contains('btn-danger')) {
+            // Let the onclick confirmation handler run first
+            const originalOnclick = this.getAttribute('onclick');
+            if (originalOnclick) {
+                // Remove the onclick to prevent double confirmation
+                this.removeAttribute('onclick');
+                
+                // Show confirmation and handle result
+                if (confirm('Are you sure you want to cancel this order?')) {
+                    e.preventDefault();
+                    const url = this.getAttribute('href');
+                    updateStatusWithLoading(this, url);
+                } else {
+                    // Re-add the onclick if user cancels
+                    this.setAttribute('onclick', originalOnclick);
+                }
+                return;
+            }
+        }
+        
+        e.preventDefault();
+        const url = this.getAttribute('href');
+        updateStatusWithLoading(this, url);
+    });
+});
 </script>
+
+<style>
+/* Loading spinner styles */
+.btn-loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.btn-loading .btn-text {
+    opacity: 0;
+}
+
+.btn-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    margin: -8px 0 0 -8px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Status button specific styles */
+.status-btn {
+    min-width: 36px;
+    transition: all 0.3s ease;
+}
+</style>
 
 </div>
 

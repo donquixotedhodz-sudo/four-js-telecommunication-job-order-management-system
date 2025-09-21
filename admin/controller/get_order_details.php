@@ -40,13 +40,18 @@ try {
             t2.phone as secondary_technician_phone,
             t2.profile_picture as secondary_technician_profile,
             ah.hp as aircon_hp_value,
-            ah.price as aircon_hp_price
+            ah.price as aircon_hp_price,
+            c.name as customer_name,
+            c.phone as customer_phone,
+            c.email as customer_email,
+            c.address as customer_address
         FROM job_orders jo 
         LEFT JOIN aircon_models am ON jo.aircon_model_id = am.id
         LEFT JOIN ac_parts ap ON jo.part_id = ap.id AND jo.service_type = 'repair'
         LEFT JOIN technicians t ON jo.assigned_technician_id = t.id
         LEFT JOIN technicians t2 ON jo.secondary_technician_id = t2.id
         LEFT JOIN aircon_hp ah ON jo.aircon_hp_id = ah.id
+        LEFT JOIN customers c ON jo.customer_id = c.id
         WHERE jo.id = ?
     ");
     $stmt->execute([$_GET['id']]);
