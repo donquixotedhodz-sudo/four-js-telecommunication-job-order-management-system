@@ -435,7 +435,7 @@ class EmailService {
                         <tr>
                             <td style='padding: 12px 0; font-weight: 600; color: #495057; font-size: 15px;'>Total Amount:</td>
                             <td style='padding: 12px 0; text-align: right;'>
-                                <span style='background: #2c3e50; color: white; padding: 10px 16px; border-radius: 4px; font-size: 18px; font-weight: 700;'>{${totalAmount}}</span>
+                                <span style='background: #2c3e50; color: white; padding: 10px 16px; border-radius: 4px; font-size: 18px; font-weight: 700;'>{$totalAmount}</span>
                             </td>
                         </tr>
                     </table>
@@ -473,6 +473,146 @@ class EmailService {
                     <h4 style='margin: 0 0 15px 0; color: #2c3e50; font-size: 16px; font-weight: 600;'>Need Future Service?</h4>
                     <p style='margin: 0; color: #555555; font-size: 14px; line-height: 1.6;'>
                         For any future air conditioning needs, maintenance, or questions, don't hesitate to contact us at 
+                        <strong style='color: #2c3e50;'>4jelec@gmail.com</strong> or call us at 
+                        <strong style='color: #2c3e50;'>+639 21 944 6300</strong>.
+                    </p>
+                </div>
+                
+            </div>
+            
+            <!-- Footer -->
+            <div style='text-align: center; padding: 20px; color: #6c757d; font-size: 13px; border-top: 1px solid #dee2e6; margin-top: 30px;'>
+                <p style='margin: 0 0 8px 0;'>© 2024 FourJS Air Conditioning Services. All rights reserved.</p>
+                <p style='margin: 0; font-size: 12px;'>This is an automated message. Please do not reply to this email.</p>
+            </div>
+            
+        </body>
+        </html>
+        ";
+    }
+
+    /**
+     * Send bulk order confirmation email
+     */
+    public function sendBulkOrderConfirmation($customerEmail, $customerName, $orders, $serviceType, $totalPrice) {
+        try {
+            // Clear any previous recipients
+            $this->mail->clearAddresses();
+            
+            // Recipients
+            $this->mail->addAddress($customerEmail, $customerName);
+            
+            // Content
+            $this->mail->isHTML(true);
+            $this->mail->Subject = "Bulk Order Confirmation - " . count($orders) . " " . ucfirst($serviceType) . " Orders";
+            
+            $htmlBody = $this->getBulkOrderConfirmationTemplate($customerName, $orders, $serviceType, $totalPrice);
+            $this->mail->Body = $htmlBody;
+            $this->mail->AltBody = strip_tags($htmlBody);
+            
+            $this->mail->send();
+            return ['success' => true, 'message' => 'Bulk order confirmation email sent successfully'];
+            
+        } catch (Exception $e) {
+            error_log("Email sending failed: " . $e->getMessage());
+            return ['success' => false, 'message' => 'Email sending failed: ' . $e->getMessage()];
+        }
+    }
+
+    /**
+     * Get bulk order confirmation email template
+     */
+    private function getBulkOrderConfirmationTemplate($customerName, $orders, $serviceType, $totalPrice) {
+        $orderCount = count($orders);
+        $ordersList = '';
+        
+        foreach ($orders as $order) {
+            $ordersList .= "
+                <tr style='border-bottom: 1px solid #dee2e6;'>
+                    <td style='padding: 12px; color: #2c3e50; font-weight: 600;'>{$order['job_order_number']}</td>
+                    <td style='padding: 12px; color: #555555;'>" . (isset($order['aircon_model']) ? $order['aircon_model'] : 'N/A') . "</td>
+                    <td style='padding: 12px; color: #555555;'>" . (isset($order['hp']) ? $order['hp'] : 'N/A') . "</td>
+                    <td style='padding: 12px; color: #555555;'>₱" . number_format($order['price'], 2) . "</td>
+                </tr>
+            ";
+        }
+        
+        return "
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset='UTF-8'>
+            <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+            <title>Order Confirmation</title>
+        </head>
+        <body style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif; line-height: 1.6; color: #333333; max-width: 650px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;'>
+            
+            <!-- Header -->
+            <div style='background: #4285f4; color: white; padding: 30px; border-radius: 8px 8px 0 0; text-align: center;'>
+                <h1 style='margin: 0; font-size: 28px; font-weight: 700;'>Order Confirmation</h1>
+                <p style='margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;'>Your multiple orders have been successfully created</p>
+            </div>
+            
+            <!-- Main Content -->
+            <div style='background: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);'>
+                
+                <!-- Greeting -->
+                <div style='margin-bottom: 25px;'>
+                    <h2 style='color: #2c3e50; margin: 0 0 10px 0; font-size: 20px;'>Hello {$customerName},</h2>
+                    <p style='color: #555555; margin: 0; font-size: 16px; line-height: 1.6;'>
+                        Thank you for choosing our services! We've successfully created <strong>{$orderCount}</strong> {$serviceType} orders for you.
+                    </p>
+                </div>
+                
+                <!-- Order Summary -->
+                <div style='background: #f8f9fa; padding: 20px; border-radius: 6px; margin: 25px 0; border: 1px solid #dee2e6;'>
+                    <h3 style='margin: 0 0 15px 0; color: #2c3e50; font-size: 18px; font-weight: 600;'>📋 Order Summary</h3>
+                    <table style='width: 100%; border-collapse: collapse;'>
+                        <thead>
+                            <tr style='background: #e9ecef;'>
+                                <th style='padding: 12px; text-align: left; color: #2c3e50; font-weight: 600; border-bottom: 2px solid #dee2e6;'>Order Number</th>
+                                <th style='padding: 12px; text-align: left; color: #2c3e50; font-weight: 600; border-bottom: 2px solid #dee2e6;'>Aircon Model</th>
+                                <th style='padding: 12px; text-align: left; color: #2c3e50; font-weight: 600; border-bottom: 2px solid #dee2e6;'>HP</th>
+                                <th style='padding: 12px; text-align: left; color: #2c3e50; font-weight: 600; border-bottom: 2px solid #dee2e6;'>Price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {$ordersList}
+                        </tbody>
+                        <tfoot>
+                            <tr style='background: #e8f4fd; font-weight: 600;'>
+                                <td colspan='3' style='padding: 15px; color: #2c3e50; border-top: 2px solid #dee2e6;'>Total Amount</td>
+                                <td style='padding: 15px; color: #2c3e50; border-top: 2px solid #dee2e6; font-size: 18px;'>₱" . number_format($totalPrice, 2) . "</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                
+                <!-- Status Information -->
+                <div style='background: #fff3cd; padding: 20px; border-radius: 6px; margin: 25px 0; border: 1px solid #ffeaa7;'>
+                    <h4 style='margin: 0 0 15px 0; color: #856404; font-size: 16px; font-weight: 600;'>⏳ Current Status: PENDING</h4>
+                    <p style='margin: 0; color: #856404; font-size: 14px; line-height: 1.6;'>
+                        All your orders are currently pending and will be processed by our technicians soon. 
+                        You will receive updates as each order progresses.
+                    </p>
+                </div>
+                
+                <!-- Next Steps -->
+                <div style='background: #d1ecf1; padding: 20px; border-radius: 6px; margin: 25px 0; border: 1px solid #bee5eb;'>
+                    <h4 style='margin: 0 0 15px 0; color: #0c5460; font-size: 16px; font-weight: 600;'>📋 What Happens Next?</h4>
+                    <ul style='margin: 0; padding-left: 20px; color: #0c5460; font-size: 14px; line-height: 1.8;'>
+                        <li>Our team will review and assign technicians to your orders</li>
+                        <li>You'll receive individual notifications as each order is accepted</li>
+                        <li>Our technicians will contact you to schedule service appointments</li>
+                        <li>You'll get completion notifications with receipts for each completed order</li>
+                    </ul>
+                </div>
+                
+                <!-- Contact Information -->
+                <div style='background: #e8f4fd; padding: 20px; border-radius: 6px; margin: 25px 0; border: 1px solid #bee5eb;'>
+                    <h4 style='margin: 0 0 15px 0; color: #2c3e50; font-size: 16px; font-weight: 600;'>📞 Need Help?</h4>
+                    <p style='margin: 0; color: #555555; font-size: 14px; line-height: 1.6;'>
+                        If you have any questions about your orders or need to make changes, please contact us at 
                         <strong style='color: #2c3e50;'>support@fourjs.com</strong> or call us at 
                         <strong style='color: #2c3e50;'>(555) 123-4567</strong>.
                     </p>

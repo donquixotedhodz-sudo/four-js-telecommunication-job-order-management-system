@@ -147,30 +147,34 @@ try {
         ]);
         
         // Track created order for email notifications
+        // Fetch aircon model details including HP
+        $model_stmt = $pdo->prepare("SELECT brand, model_name, hp FROM aircon_models WHERE id = ?");
+        $model_stmt->execute([$aircon_model_id]);
+        $aircon_model = $model_stmt->fetch(PDO::FETCH_ASSOC);
+        
         $created_orders[] = [
             'job_order_number' => $job_order_number,
-            'price' => $order_total
+            'price' => $order_total,
+            'aircon_model' => $aircon_model ? $aircon_model['brand'] . ' - ' . $aircon_model['model_name'] : 'N/A',
+            'hp' => $aircon_model ? $aircon_model['hp'] : 'N/A'
         ];
     }
     
     $pdo->commit();
     
-    // Send email notification if customer has email
+    // Send bulk email notification if customer has email
     if (!empty($customer_email)) {
         try {
             $emailService = new EmailService();
             
-            // Send confirmation email for each repair order
-            foreach ($created_orders as $order) {
-                $emailService->sendTicketConfirmation(
-                    $customer_email,
-                    $customer_name,
-                    $order['job_order_number'],
-                    $service_type,
-                    'Your repair service has been scheduled and will be processed soon.',
-                    $order['price']
-                );
-            }
+            // Send single bulk confirmation email
+            $emailService->sendBulkOrderConfirmation(
+                $customer_email,
+                $customer_name,
+                $created_orders,
+                $service_type,
+                $total_final_price
+            );
         } catch (Exception $e) {
             // Log email error but don't fail the order creation
             error_log("Email notification failed: " . $e->getMessage());

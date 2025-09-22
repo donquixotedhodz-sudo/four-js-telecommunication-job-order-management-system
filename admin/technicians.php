@@ -212,6 +212,7 @@ require_once 'includes/header.php';
                                                         data-name="<?= htmlspecialchars($tech['name']) ?>"
                                                         data-username="<?= htmlspecialchars($tech['username']) ?>"
                                                         data-phone="<?= htmlspecialchars($tech['phone']) ?>"
+                                                        data-profile-picture="<?= !empty($tech['profile_picture']) ? '../' . htmlspecialchars($tech['profile_picture']) : 'https://ui-avatars.com/api/?name=' . urlencode($tech['name']) . '&background=1a237e&color=fff' ?>"
                                                         title="Edit Technician">
                                                     <i class="fas fa-edit text-warning"></i>
                                                 </button>
@@ -301,8 +302,28 @@ require_once 'includes/header.php';
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="editTechnicianForm" action="controller/edit_technician.php" method="POST">
+                    <form id="editTechnicianForm" action="controller/edit_technician.php" method="POST" enctype="multipart/form-data">
                         <input type="hidden" name="technician_id" id="edit_technician_id">
+                        
+                        <!-- Current Profile Picture Display -->
+                        <div class="mb-3 text-center">
+                            <label class="form-label">Current Profile Picture</label>
+                            <div class="d-flex justify-content-center mb-2">
+                                <img id="edit_current_profile_picture" 
+                                     src="" 
+                                     alt="Current Profile" 
+                                     class="rounded-circle"
+                                     style="width: 80px; height: 80px; object-fit: cover; border: 2px solid #dee2e6;">
+                            </div>
+                        </div>
+                        
+                        <!-- Profile Picture Upload -->
+                        <div class="mb-3">
+                            <label class="form-label">Change Profile Picture</label>
+                            <input type="file" class="form-control" name="profile_picture" id="edit_profile_picture" accept="image/*">
+                            <div class="form-text">Leave empty to keep current picture. Accepted formats: JPG, PNG, GIF (Max: 5MB)</div>
+                        </div>
+                        
                         <div class="mb-3">
                             <label class="form-label">Full Name</label>
                             <input type="text" class="form-control" name="name" id="edit_technician_name" required>
@@ -430,12 +451,18 @@ require_once 'includes/header.php';
                 const technicianName = button.getAttribute('data-name');
                 const technicianUsername = button.getAttribute('data-username');
                 const technicianPhone = button.getAttribute('data-phone');
+                const technicianProfilePicture = button.getAttribute('data-profile-picture');
 
                 // Populate the modal's form fields
                 editModal.querySelector('#edit_technician_id').value = technicianId;
                 editModal.querySelector('#edit_technician_name').value = technicianName;
                 editModal.querySelector('#edit_technician_username').value = technicianUsername;
                 editModal.querySelector('#edit_technician_phone').value = technicianPhone;
+                
+                // Set the current profile picture
+                const currentProfilePicture = editModal.querySelector('#edit_current_profile_picture');
+                currentProfilePicture.src = technicianProfilePicture;
+                currentProfilePicture.alt = technicianName + "'s Profile Picture";
             });
 
             deleteModal.addEventListener('show.bs.modal', function (event) {

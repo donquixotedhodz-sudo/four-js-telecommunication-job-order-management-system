@@ -319,7 +319,7 @@ try {
                                                 title="Edit Order">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <a href="controller/update-status.php?status=cancelled&id=<?= $order['id'] ?>&customer_id=<?= $customer['id'] ?>" class="btn btn-sm btn-danger status-update-btn" data-bs-toggle="tooltip" title="Cancel Order" onclick="return confirm('Are you sure you want to cancel this order?');">
+                                            <a href="controller/update-status.php?status=cancelled&id=<?= $order['id'] ?>&customer_id=<?= $customer['id'] ?>" class="btn btn-sm btn-danger status-update-btn" data-bs-toggle="tooltip" title="Cancel Order">
                                                 <span class="btn-text"><i class="fas fa-trash"></i></span>
                                             </a>
                                         </div>
@@ -502,7 +502,7 @@ try {
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Create Orders</button>
+                    <button type="submit" class="btn btn-primary" id="createOrdersBtn">Create Orders</button>
                 </div>
             </form>
         </div>
@@ -944,14 +944,26 @@ try {
                     <div class="col-12" id="view_technician_section" style="display: none;">
                         <div class="card">
                             <div class="card-header">
-                                <h6 class="card-title mb-0">Assigned Technician</h6>
+                                <h6 class="card-title mb-0">Assigned Technicians</h6>
                             </div>
                             <div class="card-body">
-                                <div class="d-flex align-items-center">
-                                    <img id="view_technician_avatar" src="" alt="Technician" class="rounded-circle me-3" width="48" height="48">
+                                <!-- Primary Technician -->
+                                <div class="d-flex align-items-center mb-3" id="view_primary_technician">
+                                    <img id="view_technician_avatar" src="" alt="Primary Technician" class="rounded-circle me-3" width="48" height="48">
                                     <div>
                                         <h6 class="mb-1" id="view_technician_name">-</h6>
                                         <p class="text-muted mb-0" id="view_technician_phone">-</p>
+                                        <small class="badge bg-primary">Primary</small>
+                                    </div>
+                                </div>
+                                
+                                <!-- Secondary Technician -->
+                                <div class="d-flex align-items-center" id="view_secondary_technician" style="display: none;">
+                                    <img id="view_secondary_technician_avatar" src="" alt="Secondary Technician" class="rounded-circle me-3" width="48" height="48">
+                                    <div>
+                                        <h6 class="mb-1" id="view_secondary_technician_name">-</h6>
+                                        <p class="text-muted mb-0" id="view_secondary_technician_phone">-</p>
+                                        <small class="badge bg-success">Secondary</small>
                                     </div>
                                 </div>
                             </div>
@@ -1179,6 +1191,20 @@ document.addEventListener('DOMContentLoaded', function() {
             calculateBulkTotal();
         });
     });
+
+    // Handle Create Orders button loading animation
+    const bulkOrderForm = document.querySelector('#bulkOrderModal form');
+    const createOrdersBtn = document.getElementById('createOrdersBtn');
+    
+    if (bulkOrderForm && createOrdersBtn) {
+        bulkOrderForm.addEventListener('submit', function(e) {
+            const originalBtnText = createOrdersBtn.innerHTML;
+            
+            // Disable submit button and show loading
+            createOrdersBtn.disabled = true;
+            createOrdersBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating Orders...';
+        });
+    }
 
     // Bulk order price calculation
     function calculateBulkTotal() {
@@ -1602,17 +1628,39 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         // Populate technician information
                         var techSection = document.getElementById('view_technician_section');
+                        var primaryTechSection = document.getElementById('view_primary_technician');
+                        var secondaryTechSection = document.getElementById('view_secondary_technician');
+                        
                         if (order.technician_name) {
                             techSection.style.display = 'block';
+                            
+                            // Primary technician
                             document.getElementById('view_technician_name').textContent = order.technician_name;
                             document.getElementById('view_technician_phone').textContent = order.technician_phone || 'N/A';
                             
-                            // Set technician avatar
+                            // Set primary technician avatar
                             var avatar = document.getElementById('view_technician_avatar');
                             if (order.technician_profile) {
                                 avatar.src = '../' + order.technician_profile;
                             } else {
                                 avatar.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(order.technician_name) + '&background=1a237e&color=fff';
+                            }
+                            
+                            // Secondary technician
+                            if (order.secondary_technician_name) {
+                                secondaryTechSection.style.display = 'block';
+                                document.getElementById('view_secondary_technician_name').textContent = order.secondary_technician_name;
+                                document.getElementById('view_secondary_technician_phone').textContent = order.secondary_technician_phone || 'N/A';
+                                
+                                // Set secondary technician avatar
+                                var secondaryAvatar = document.getElementById('view_secondary_technician_avatar');
+                                if (order.secondary_technician_profile) {
+                                    secondaryAvatar.src = '../' + order.secondary_technician_profile;
+                                } else {
+                                    secondaryAvatar.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(order.secondary_technician_name) + '&background=28a745&color=fff';
+                                }
+                            } else {
+                                secondaryTechSection.style.display = 'none';
                             }
                         } else {
                             techSection.style.display = 'none';
@@ -2214,31 +2262,59 @@ function updateStatusWithLoading(button, url) {
     }, 300);
 }
 
+// Function to show custom notification
+function showCancelNotification(button, url) {
+    // Create notification overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'cancel-notification-overlay';
+    overlay.innerHTML = `
+        <div class="cancel-notification-modal">
+            <div class="cancel-notification-header">
+                <i class="fas fa-exclamation-triangle text-warning"></i>
+                <h5>Cancel Order</h5>
+            </div>
+            <div class="cancel-notification-body">
+                <p>Do you want to cancel this order? This action cannot be undone.</p>
+            </div>
+            <div class="cancel-notification-footer">
+                <button type="button" class="btn btn-secondary cancel-notification-no">No, Keep Order</button>
+                <button type="button" class="btn btn-danger cancel-notification-yes">Yes, Cancel Order</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(overlay);
+    
+    // Handle button clicks
+    overlay.querySelector('.cancel-notification-yes').addEventListener('click', function() {
+        document.body.removeChild(overlay);
+        updateStatusWithLoading(button, url);
+    });
+    
+    overlay.querySelector('.cancel-notification-no').addEventListener('click', function() {
+        document.body.removeChild(overlay);
+    });
+    
+    // Close on overlay click
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) {
+            document.body.removeChild(overlay);
+        }
+    });
+}
+
 // Add click handlers to all status update buttons
 document.querySelectorAll('.status-update-btn').forEach(button => {
     button.addEventListener('click', function(e) {
+        e.preventDefault();
+        
         // Check if this is a cancel button with confirmation
         if (this.classList.contains('btn-danger')) {
-            // Let the onclick confirmation handler run first
-            const originalOnclick = this.getAttribute('onclick');
-            if (originalOnclick) {
-                // Remove the onclick to prevent double confirmation
-                this.removeAttribute('onclick');
-                
-                // Show confirmation and handle result
-                if (confirm('Are you sure you want to cancel this order?')) {
-                    e.preventDefault();
-                    const url = this.getAttribute('href');
-                    updateStatusWithLoading(this, url);
-                } else {
-                    // Re-add the onclick if user cancels
-                    this.setAttribute('onclick', originalOnclick);
-                }
-                return;
-            }
+            const url = this.getAttribute('href');
+            showCancelNotification(this, url);
+            return;
         }
         
-        e.preventDefault();
         const url = this.getAttribute('href');
         updateStatusWithLoading(this, url);
     });
@@ -2280,6 +2356,84 @@ document.querySelectorAll('.status-update-btn').forEach(button => {
 .status-btn {
     min-width: 36px;
     transition: all 0.3s ease;
+}
+
+/* Custom notification modal styles */
+.cancel-notification-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    animation: fadeIn 0.3s ease;
+}
+
+.cancel-notification-modal {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    max-width: 400px;
+    width: 90%;
+    animation: slideIn 0.3s ease;
+}
+
+.cancel-notification-header {
+    padding: 20px 20px 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.cancel-notification-header i {
+    font-size: 24px;
+}
+
+.cancel-notification-header h5 {
+    margin: 0;
+    color: #495057;
+}
+
+.cancel-notification-body {
+    padding: 20px;
+}
+
+.cancel-notification-body p {
+    margin: 0;
+    color: #6c757d;
+    line-height: 1.5;
+}
+
+.cancel-notification-footer {
+    padding: 15px 20px 20px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.cancel-notification-footer .btn {
+    min-width: 100px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideIn {
+    from { 
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 </style>
 

@@ -122,10 +122,18 @@ try {
         ]);
 
         $order_id = $pdo->lastInsertId();
+        
+        // Fetch aircon model details including HP
+        $stmt = $pdo->prepare("SELECT brand, model_name, hp FROM aircon_models WHERE id = ?");
+        $stmt->execute([$aircon_model_id]);
+        $aircon_model = $stmt->fetch(PDO::FETCH_ASSOC);
+        
         $created_orders[] = [
             'id' => $order_id,
             'job_order_number' => $job_order_number,
-            'price' => $order_price
+            'price' => $order_price,
+            'aircon_model' => $aircon_model ? $aircon_model['brand'] . ' - ' . $aircon_model['model_name'] : 'N/A',
+            'hp' => $aircon_model ? $aircon_model['hp'] : 'N/A'
         ];
     }
 
@@ -145,22 +153,22 @@ try {
     // Commit transaction
     $pdo->commit();
 
-    // Send email notification if customer has email
+    // Calculate final total price before sending email
+    $total_final_price = $total_price - $discount;
+
+    // Send bulk email notification if customer has email
     if (!empty($customer_email)) {
         try {
             $emailService = new EmailService();
             
-            // Send confirmation email for each order
-            foreach ($created_orders as $order) {
-                $emailService->sendTicketConfirmation(
-                    $customer_email,
-                    $customer_name,
-                    $order['job_order_number'],
-                    $service_type,
-                    'Your installation service has been scheduled and will be processed soon.',
-                    $order['price']
-                );
-            }
+            // Send single bulk confirmation email
+            $emailService->sendBulkOrderConfirmation(
+                $customer_email,
+                $customer_name,
+                $created_orders,
+                $service_type,
+                $total_final_price
+            );
         } catch (Exception $e) {
             // Log email error but don't fail the order creation
             error_log("Email notification failed: " . $e->getMessage());
@@ -169,7 +177,6 @@ try {
 
     // Success message
     $order_count = count($created_orders);
-    $total_final_price = $total_price - $discount;
     
     $_SESSION['success'] = "Successfully created $order_count installation order(s) for $customer_name. Total: ₱" . number_format($total_final_price, 2);
 

@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $base_prices = $_POST['base_price'];
         $total_additional_fee = (float)$_POST['total_additional_fee'];
         $total_discount = (float)$_POST['discount'];
-        $total_price = (float)$_POST['price'];
+        $calculated_total_price = 0; // Initialize calculated total
         
         // Validate required fields
         if (empty($customer_name) || empty($customer_phone) || empty($customer_address) || empty($cleaning_service_ids)) {
@@ -98,44 +98,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['user_id']
             ]);
             
-            $created_orders[] = $job_order_number;
+            // Fetch HP and aircon model information for email
+            $hp_info = 'N/A';
+            $aircon_model_info = 'N/A';
+            
+            // Get HP information
+            if (isset($cleaning_service_ids[$i])) {
+                $hp_stmt = $pdo->prepare("SELECT hp FROM aircon_hp WHERE id = ?");
+                $hp_stmt->execute([$cleaning_service_ids[$i]]);
+                $hp_data = $hp_stmt->fetch(PDO::FETCH_ASSOC);
+                $hp_info = $hp_data ? $hp_data['hp'] . ' HP' : 'N/A';
+            }
+            
+            // Get aircon model information if provided
+            if ($aircon_model_id) {
+                $model_stmt = $pdo->prepare("SELECT brand, model_name FROM aircon_models WHERE id = ?");
+                $model_stmt->execute([$aircon_model_id]);
+                $model_data = $model_stmt->fetch(PDO::FETCH_ASSOC);
+                $aircon_model_info = $model_data ? $model_data['brand'] . ' - ' . $model_data['model_name'] : 'N/A';
+            }
+            
+            $created_orders[] = [
+                'job_order_number' => $job_order_number,
+                'price' => $order_total,
+                'hp' => $hp_info,
+                'aircon_model' => $aircon_model_info
+            ];
+            
+            // Add to calculated total
+            $calculated_total_price += $order_total;
         }
         
         // Commit transaction
         $pdo->commit();
         
-        // Send email notification if customer has email
+        // Send bulk email notification if customer has email
         if (!empty($customer_email)) {
             try {
                 require_once '../../config/EmailService.php';
                 $emailService = new EmailService();
                 
-                // Prepare order details for email
-                $orderSummary = "Bulk Cleaning Orders Created:\n";
-                foreach ($created_orders as $orderNumber) {
-                    $orderSummary .= "- Order #$orderNumber\n";
-                }
-                $orderSummary .= "\nTotal Price: ₱" . number_format($total_price, 2);
-                
-                // Send confirmation email
-                $emailResult = $emailService->sendTicketConfirmation(
+                // Send single bulk confirmation email
+                $emailService->sendBulkOrderConfirmation(
                     $customer_email,
                     $customer_name,
-                    implode(', ', $created_orders),
-                    'Bulk Cleaning Service',
-                    $orderSummary
+                    $created_orders,
+                    'cleaning',
+                    $calculated_total_price
                 );
                 
-                if ($emailResult['success']) {
-                    $_SESSION['success'] = 'Bulk cleaning orders created successfully! Job Order Numbers: ' . implode(', ', $created_orders) . '. Confirmation email sent to customer.';
-                } else {
-                    $_SESSION['success'] = 'Bulk cleaning orders created successfully! Job Order Numbers: ' . implode(', ', $created_orders) . '. Note: Email notification failed to send.';
-                }
+                $_SESSION['success'] = 'Bulk cleaning orders created successfully! Job Order Numbers: ' . implode(', ', array_column($created_orders, 'job_order_number')) . '. Confirmation email sent to customer.';
             } catch (Exception $e) {
-                $_SESSION['success'] = 'Bulk cleaning orders created successfully! Job Order Numbers: ' . implode(', ', $created_orders) . '. Note: Email notification failed to send.';
+                $_SESSION['success'] = 'Bulk cleaning orders created successfully! Job Order Numbers: ' . implode(', ', array_column($created_orders, 'job_order_number')) . '. Note: Email notification failed to send.';
             }
         } else {
-            $_SESSION['success'] = 'Bulk cleaning orders created successfully! Job Order Numbers: ' . implode(', ', $created_orders);
+            $_SESSION['success'] = 'Bulk cleaning orders created successfully! Job Order Numbers: ' . implode(', ', array_column($created_orders, 'job_order_number'));
         }
         
         // REDIRECT TO THE CUSTOMER ORDERS PAGE BASED ON THE ID
