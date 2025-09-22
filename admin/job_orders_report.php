@@ -354,7 +354,7 @@ require_once 'includes/header.php';
                         <div class="card-body">
                             <h5 class="card-title mb-2">Total Orders</h5>
                             <h3 class="card-text"><?= $summary['total_orders'] ?></h3>
-                        </div>
+                        </div>  
                     </div>
                 </div>
                 <div class="col-md-3">

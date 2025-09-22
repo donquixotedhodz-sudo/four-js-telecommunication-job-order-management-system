@@ -155,10 +155,10 @@ require_once 'includes/header.php';
                     <input type="text" id="categoryDescription" class="form-control" placeholder="Category Description">
                 </div>
                 <div class="col-md-2">
-                    <button type="button" class="btn btn-success w-100" onclick="addCategory()">Add Category</button>
+                    <button type="button" class="btn btn-primary w-100" onclick="addCategory()">Add Category</button>
                 </div>
                 <div class="col-md-1">
-                    <button type="button" class="btn btn-info w-100" onclick="toggleCategoryList()">View</button>
+                    <button type="button" class="btn btn-success w-100" onclick="toggleCategoryList()">View</button>
                 </div>
             </div>
             <div id="categoryList" class="d-none">
@@ -274,7 +274,7 @@ require_once 'includes/header.php';
                                     <td><?= htmlspecialchars($part['part_name']) ?></td>
                                     <td><?= htmlspecialchars($part['part_code']) ?></td>
                                     <td>
-                                        <span class="badge bg-secondary">
+                                        <span class="badge bg-primary">
                                             <?= htmlspecialchars($part['category_name']) ?>
                                         </span>
                                     </td>

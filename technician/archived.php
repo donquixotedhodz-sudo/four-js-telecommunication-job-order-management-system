@@ -226,7 +226,7 @@ try {
                                                         <?= ucfirst($order['status']) ?>
                                                     </span>
                                                 </td>
-                                                <td><?= date('M d, Y', strtotime($order['completed_at'])) ?></td>
+                                                <td><?= date('M d, Y', strtotime($order['created_at'])) ?></td>
                                                 <td>
                                                     <div class="d-flex justify-content-center">
                                                         <button class="btn btn-sm btn-light" 

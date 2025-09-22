@@ -320,7 +320,7 @@ require_once 'includes/header.php';
                                                         <h6 class="mb-1"><?= htmlspecialchars($part['part_name']) ?></h6>
                                                         <p class="text-muted mb-1 small"><?= htmlspecialchars($part['part_code']) ?></p>
                                                         <div class="d-flex gap-2 mb-2">
-                                            <span class="badge bg-secondary"><?= $part['warranty_months'] ?> months warranty</span>
+                                            <span class="badge bg-danger"><?= $part['warranty_months'] ?> months warranty</span>
                                         </div>
                                                     </div>
                                                     <div class="text-end">

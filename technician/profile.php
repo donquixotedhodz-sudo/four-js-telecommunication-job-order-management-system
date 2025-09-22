@@ -42,7 +42,55 @@ try {
     $stmt->execute([$_SESSION['user_id']]);
     $stats = $stmt->fetch(PDO::FETCH_ASSOC);
 
-} catch (PDOException $e) {
+    // Handle password change form submission
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
+        $current_password = $_POST['current_password'];
+        $new_password = $_POST['new_password'];
+        $confirm_password = $_POST['confirm_password'];
+        
+        // Validate input
+        $password_errors = [];
+        
+        if (empty($current_password)) {
+            $password_errors[] = "Current password is required";
+        }
+        
+        if (empty($new_password)) {
+            $password_errors[] = "New password is required";
+        } elseif (strlen($new_password) < 8) {
+            $password_errors[] = "New password must be at least 8 characters long";
+        }
+        
+        if ($new_password !== $confirm_password) {
+            $password_errors[] = "New passwords do not match";
+        }
+
+        // Verify current password
+        if (empty($password_errors)) {
+            if (!password_verify($current_password, $technician['password'])) {
+                $password_errors[] = "Current password is incorrect";
+            } else {
+                // Update password
+                $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
+                $stmt = $pdo->prepare("UPDATE technicians SET password = ? WHERE id = ?");
+                
+                if ($stmt->execute([$hashed_password, $_SESSION['user_id']])) {
+                    $_SESSION['success_message'] = "Password updated successfully";
+                    header('Location: profile.php');
+                    exit();
+                } else {
+                    $password_errors[] = "Failed to update password";
+                }
+            }
+        }
+        
+        // Store errors in session to display as alert
+        if (!empty($password_errors)) {
+            $_SESSION['error_message'] = implode('<br>', $password_errors);
+        }
+    }
+    }
+ catch (PDOException $e) {
     die("Database error: " . $e->getMessage());
 }
 // Include header
@@ -124,6 +172,20 @@ require_once 'includes/header.php';
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
                 <?php unset($_SESSION['error']); endif; ?>
+
+                <?php if (isset($_SESSION['error_message'])): ?>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <?= $_SESSION['error_message'] ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <?php unset($_SESSION['error_message']); endif; ?>
+
+                <?php if (isset($_SESSION['success_message'])): ?>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <?= $_SESSION['success_message'] ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <?php unset($_SESSION['success_message']); endif; ?>
 
                 <!-- Profile Content -->
                 <div class="row">
@@ -252,33 +314,34 @@ require_once 'includes/header.php';
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <form action="update-password.php" method="POST">
+                    <form action="profile.php" method="POST">
+                        <input type="hidden" name="change_password" value="1">
                         <div class="mb-3">
                             <label class="form-label">Current Password</label>
-                            <div class="password-field">
-                                <input type="password" class="form-control" name="current_password" required>
-                                <span class="password-toggle" onclick="togglePassword(this.previousElementSibling)">
-                                    <i class="fas fa-eye"></i>
-                                </span>
+                            <div class="position-relative">
+                                <input type="password" class="form-control pe-5" name="current_password" id="current_password" required>
+                                <button class="btn position-absolute top-50 end-0 translate-middle-y me-2 password-toggle-btn" type="button" onclick="togglePassword('current_password')" style="border: none; background: none; color: #6c757d; z-index: 10; display: none;">
+                                    <i class="fas fa-eye" id="current_password_icon"></i>
+                                </button>
                             </div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">New Password</label>
-                            <div class="password-field">
-                                <input type="password" class="form-control" name="new_password" required minlength="8">
-                                <span class="password-toggle" onclick="togglePassword(this.previousElementSibling)">
-                                    <i class="fas fa-eye"></i>
-                                </span>
+                            <div class="position-relative">
+                                <input type="password" class="form-control pe-5" name="new_password" id="new_password" required minlength="8">
+                                <button class="btn position-absolute top-50 end-0 translate-middle-y me-2 password-toggle-btn" type="button" onclick="togglePassword('new_password')" style="border: none; background: none; color: #6c757d; z-index: 10; display: none;">
+                                    <i class="fas fa-eye" id="new_password_icon"></i>
+                                </button>
                             </div>
                             <small class="text-muted">Password must be at least 8 characters long</small>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Confirm New Password</label>
-                            <div class="password-field">
-                                <input type="password" class="form-control" name="confirm_password" required minlength="8">
-                                <span class="password-toggle" onclick="togglePassword(this.previousElementSibling)">
-                                    <i class="fas fa-eye"></i>
-                                </span>
+                            <div class="position-relative">
+                                <input type="password" class="form-control pe-5" name="confirm_password" id="confirm_password" required minlength="8">
+                                <button class="btn position-absolute top-50 end-0 translate-middle-y me-2 password-toggle-btn" type="button" onclick="togglePassword('confirm_password')" style="border: none; background: none; color: #6c757d; z-index: 10; display: none;">
+                                    <i class="fas fa-eye" id="confirm_password_icon"></i>
+                                </button>
                             </div>
                         </div>
                         <div class="modal-footer px-0 pb-0">
@@ -296,18 +359,52 @@ require_once 'includes/header.php';
     <!-- Custom JS -->
     <script src="../js/dashboard.js"></script>
     <script>
-        function togglePassword(input) {
-            const icon = input.nextElementSibling.querySelector('i');
-            if (input.type === 'password') {
-                input.type = 'text';
+        function togglePassword(fieldId) {
+            const passwordField = document.getElementById(fieldId);
+            const icon = document.getElementById(fieldId + '_icon');
+            
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
                 icon.classList.remove('fa-eye');
                 icon.classList.add('fa-eye-slash');
             } else {
-                input.type = 'password';
+                passwordField.type = 'password';
                 icon.classList.remove('fa-eye-slash');
                 icon.classList.add('fa-eye');
             }
         }
+
+        // Show/hide password toggle icons based on input content
+        document.addEventListener('DOMContentLoaded', function() {
+            const passwordFields = ['current_password', 'new_password', 'confirm_password'];
+            
+            passwordFields.forEach(function(fieldId) {
+                const passwordInput = document.getElementById(fieldId);
+                const toggleButton = passwordInput.nextElementSibling;
+                
+                // Show/hide toggle button based on input content
+                passwordInput.addEventListener('input', function() {
+                    if (passwordInput.value.length > 0) {
+                        toggleButton.style.display = 'block';
+                    } else {
+                        toggleButton.style.display = 'none';
+                        // Reset to password type when input is cleared
+                        passwordInput.type = 'password';
+                        const icon = document.getElementById(fieldId + '_icon');
+                        icon.classList.remove('fa-eye-slash');
+                        icon.classList.add('fa-eye');
+                    }
+                });
+            });
+
+            // Show change password modal if there are password errors
+            <?php if (isset($_SESSION['show_password_modal'])): ?>
+            var changePasswordModal = new bootstrap.Modal(document.getElementById('changePasswordModal'));
+            changePasswordModal.show();
+            <?php 
+            unset($_SESSION['show_password_modal']); 
+            endif; ?>
+        });
 
         // Profile picture preview
         document.querySelector('input[name="profile_picture"]').addEventListener('change', function(e) {
@@ -321,4 +418,4 @@ require_once 'includes/header.php';
         });
     </script>
 </body>
-</html> 
+</html>
