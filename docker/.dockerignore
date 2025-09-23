@@ -1,0 +1,38 @@
+# Git files
+.git
+.gitignore
+
+# Docker files
+docker/
+
+# Vendor directories that will be reinstalled
+vendor/
+node_modules/
+
+# Environment files
+.env
+
+# IDE files
+.idea/
+.vscode/
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
+
+# Uploaded files (these should be persisted via volumes)
+uploads/profile_pictures/*
+!uploads/profile_pictures/.gitkeep
+
+# Backup files
+*.bak
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
