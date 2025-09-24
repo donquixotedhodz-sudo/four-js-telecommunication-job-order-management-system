@@ -133,7 +133,7 @@ $summary_stmt->execute($params);
 $summary = $summary_stmt->fetch(PDO::FETCH_ASSOC);
 
 // Get job orders (including cancelled)
-$sql = "SELECT job_orders.*, 
+$sql = "SELECT DISTINCT job_orders.*, 
                aircon_models.brand, 
                aircon_models.model_name,
                aircon_models.hp,
