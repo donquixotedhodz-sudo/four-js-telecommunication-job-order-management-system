@@ -183,8 +183,8 @@ require_once 'includes/header.php';
                                                 <td>
                                                     <div class="fw-semibold"><?= htmlspecialchars($order['customer_name']) ?></div>
                                                     <div class="small text-muted">
-                                                        <i class="fas fa-phone me-1"></i><?= htmlspecialchars($order['customer_phone']) ?><br>
-                                                        <i class="fas fa-map-marker-alt me-1"></i><?= htmlspecialchars($order['customer_address']) ?>
+                                                        <i class="fas fa-phone me-1 text-success"></i><?= htmlspecialchars($order['customer_phone']) ?><br>
+                                                        <i class="fas fa-map-marker-alt me-1 text-danger"></i><?= htmlspecialchars($order['customer_address']) ?>
                                                     </div>
                                                 </td>
                                                 <td>

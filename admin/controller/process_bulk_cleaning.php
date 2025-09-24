@@ -68,8 +68,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $proportional_discount = $total_subtotal > 0 ? ($order_subtotal / $total_subtotal) * $total_discount : 0;
             $order_total = $order_subtotal - $proportional_discount;
             
-            // Generate job order number
+            // Generate unique job order number
+        do {
             $job_order_number = 'JO-' . date('Ymd') . '-' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
+            
+            // Check if this job order number already exists
+            $check_stmt = $pdo->prepare("SELECT COUNT(*) FROM job_orders WHERE job_order_number = ?");
+            $check_stmt->execute([$job_order_number]);
+            $exists = $check_stmt->fetchColumn() > 0;
+        } while ($exists);
             
             // Insert job order
             $stmt = $pdo->prepare("

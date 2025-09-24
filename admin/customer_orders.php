@@ -36,7 +36,7 @@ try {
     
     // Get active orders for this customer (excluding completed and cancelled)
     $stmt = $pdo->prepare("
-        SELECT 
+        SELECT DISTINCT
             jo.*,
             COALESCE(am.model_name, 'Not Specified') as model_name,
             COALESCE(am.brand, 'Not Specified') as brand,
@@ -450,13 +450,9 @@ try {
                                                 <?php endforeach; ?>
                                             </select>
                                         </div>
-                                        <div class="col-md-3">
+                                        <div class="col-md-6">
                                             <label class="form-label">Base Price (₱)</label>
                                             <input type="number" class="form-control base-price-input" name="base_price[]" readonly>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label class="form-label">Additional Fee (₱)</label>
-                                            <input type="number" class="form-control additional-fee-input" name="additional_fee[]" value="0" min="0" step="0.01">
                                         </div>
                                     </div>
                                 </div>
@@ -467,7 +463,11 @@ try {
                         </div>
 
                         <!-- Pricing Summary -->
-                        <div class="col-md-6">
+                        <div class="col-md-3">
+                            <label class="form-label">Total Additional Fee (₱)</label>
+                            <input type="number" class="form-control" name="total_additional_fee" id="bulk_additional_fee" value="0" min="0" step="0.01">
+                        </div>
+                        <div class="col-md-3">
                             <label class="form-label">Total Discount (₱)</label>
                             <input type="number" class="form-control" name="discount" id="bulk_discount" value="0" min="0" step="0.01">
                         </div>
@@ -1155,13 +1155,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-6">
                     <label class="form-label">Base Price (₱)</label>
                     <input type="number" class="form-control base-price-input" name="base_price[]" readonly>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Additional Fee (₱)</label>
-                    <input type="number" class="form-control additional-fee-input" name="additional_fee[]" value="0" min="0" step="0.01">
                 </div>
             </div>
             <button type="button" class="btn btn-sm btn-outline-danger mt-2 remove-order-btn">
@@ -1174,7 +1170,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add event listeners to new order
         const newAirconSelect = newOrder.querySelector('.aircon-model-select');
         const newBasePriceInput = newOrder.querySelector('.base-price-input');
-        const newAdditionalFeeInput = newOrder.querySelector('.additional-fee-input');
         const removeBtn = newOrder.querySelector('.remove-order-btn');
         
         newAirconSelect.addEventListener('change', function() {
@@ -1184,13 +1179,37 @@ document.addEventListener('DOMContentLoaded', function() {
             calculateBulkTotal();
         });
         
-        newAdditionalFeeInput.addEventListener('input', calculateBulkTotal);
-        
         removeBtn.addEventListener('click', function() {
             newOrder.remove();
             calculateBulkTotal();
         });
     });
+
+    // Handle single job order form submission with duplicate prevention
+    const addJobOrderForm = document.querySelector('#addJobOrderModal form');
+    if (addJobOrderForm) {
+        addJobOrderForm.addEventListener('submit', function(e) {
+            const submitBtn = this.querySelector('button[type="submit"]');
+            
+            // Prevent duplicate submissions
+            if (submitBtn.disabled) {
+                e.preventDefault();
+                return false;
+            }
+            
+            const originalBtnText = submitBtn.innerHTML;
+            
+            // Disable submit button and show loading
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating Order...';
+            
+            // Re-enable button after a delay in case of errors
+            setTimeout(() => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
+            }, 8000); // Increased timeout for single order operations
+        });
+    }
 
     // Handle Create Orders button loading animation
     const bulkOrderForm = document.querySelector('#bulkOrderModal form');
@@ -1198,32 +1217,41 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (bulkOrderForm && createOrdersBtn) {
         bulkOrderForm.addEventListener('submit', function(e) {
+            // Prevent duplicate submissions
+            if (createOrdersBtn.disabled) {
+                e.preventDefault();
+                return false;
+            }
+            
             const originalBtnText = createOrdersBtn.innerHTML;
             
             // Disable submit button and show loading
             createOrdersBtn.disabled = true;
             createOrdersBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating Orders...';
+            
+            // Re-enable button after form submission completes or on error
+            // The timeout is a fallback in case the form doesn't redirect properly
+            setTimeout(() => {
+                createOrdersBtn.disabled = false;
+                createOrdersBtn.innerHTML = originalBtnText;
+            }, 10000); // Increased timeout for bulk operations
         });
     }
 
     // Bulk order price calculation
     function calculateBulkTotal() {
         const basePriceInputs = document.querySelectorAll('.base-price-input');
-        const additionalFeeInputs = document.querySelectorAll('.additional-fee-input');
+        const bulkAdditionalFeeInput = document.getElementById('bulk_additional_fee');
         const discountInput = document.getElementById('bulk_discount');
         const totalPriceInput = document.getElementById('bulk_total_price');
         
         let totalBasePrice = 0;
-        let totalAdditionalFee = 0;
         
         basePriceInputs.forEach(input => {
             totalBasePrice += parseFloat(input.value) || 0;
         });
         
-        additionalFeeInputs.forEach(input => {
-            totalAdditionalFee += parseFloat(input.value) || 0;
-        });
-        
+        const totalAdditionalFee = parseFloat(bulkAdditionalFeeInput.value) || 0;
         const discount = parseFloat(discountInput.value) || 0;
         const total = totalBasePrice + totalAdditionalFee - discount;
         
@@ -1247,10 +1275,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    document.querySelectorAll('.additional-fee-input').forEach(input => {
-        input.addEventListener('input', calculateBulkTotal);
-    });
-
+    document.getElementById('bulk_additional_fee').addEventListener('input', calculateBulkTotal);
     document.getElementById('bulk_discount').addEventListener('input', calculateBulkTotal);
 
     // Bulk repair order functionality
@@ -1363,6 +1388,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const formData = new FormData(form);
         const submitBtn = form.querySelector('button[type="submit"]');
         const originalBtnText = submitBtn.innerHTML;
+        
+        // Prevent duplicate submissions
+        if (submitBtn.disabled) {
+            return false;
+        }
         
         // Disable submit button and show loading
         submitBtn.disabled = true;
