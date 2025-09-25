@@ -32,10 +32,10 @@ if (isset($_GET['ajax'])) {
                         )
                         SELECT 
                             CONCAT('Week ', WEEK(w.week_start)) as period,
-                            COALESCE(COUNT(jo.id), 0) as total_orders
+                            COALESCE(COUNT(DISTINCT jo.id), 0) as total_orders
                         FROM weeks w
                         LEFT JOIN job_orders jo ON YEARWEEK(jo.created_at) = REPLACE(w.period, '-', '')
-                            AND jo.assigned_technician_id = ?
+                            AND (jo.assigned_technician_id = ? OR jo.secondary_technician_id = ?)
                         GROUP BY w.period, w.week_start
                         ORDER BY w.week_start ASC
                     ");
@@ -52,10 +52,10 @@ if (isset($_GET['ajax'])) {
                         )
                         SELECT 
                             CAST(y.year_num AS CHAR) as period,
-                            COALESCE(COUNT(jo.id), 0) as total_orders
+                            COALESCE(COUNT(DISTINCT jo.id), 0) as total_orders
                         FROM years y
                         LEFT JOIN job_orders jo ON YEAR(jo.created_at) = y.year_num
-                            AND jo.assigned_technician_id = ?
+                            AND (jo.assigned_technician_id = ? OR jo.secondary_technician_id = ?)
                         GROUP BY y.year_num
                         ORDER BY y.year_num ASC
                     ");
@@ -67,14 +67,14 @@ if (isset($_GET['ajax'])) {
                     $stmt = $pdo->prepare("
                         SELECT 
                             DATE_FORMAT(created_at, '%Y-%m') as period,
-                            COUNT(*) as total_orders
+                            COUNT(DISTINCT id) as total_orders
                         FROM job_orders 
-                        WHERE assigned_technician_id = ?
+                        WHERE (assigned_technician_id = ? OR secondary_technician_id = ?)
                         AND DATE(created_at) BETWEEN ? AND ?
                         GROUP BY DATE_FORMAT(created_at, '%Y-%m')
                         ORDER BY period ASC
                     ");
-                    $stmt->execute([$technician_id, $start_date, $end_date]);
+                    $stmt->execute([$technician_id, $technician_id, $start_date, $end_date]);
                     break;
                     
                 default: // monthly
@@ -88,10 +88,10 @@ if (isset($_GET['ajax'])) {
                         )
                         SELECT 
                             DATE_FORMAT(STR_TO_DATE(CONCAT(m.month, '-01'), '%Y-%m-%d'), '%b %Y') as period,
-                            COALESCE(COUNT(jo.id), 0) as total_orders
+                            COALESCE(COUNT(DISTINCT jo.id), 0) as total_orders
                         FROM months m
                         LEFT JOIN job_orders jo ON DATE_FORMAT(jo.created_at, '%Y-%m') = m.month 
-                            AND jo.assigned_technician_id = ?
+                            AND (jo.assigned_technician_id = ? OR jo.secondary_technician_id = ?)
                         GROUP BY m.month
                         ORDER BY m.month ASC
                     ");
@@ -99,7 +99,7 @@ if (isset($_GET['ajax'])) {
             }
             
             if ($filter !== 'custom') {
-                $stmt->execute([$technician_id]);
+                $stmt->execute([$technician_id, $technician_id]);
             }
             
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -120,48 +120,48 @@ try {
     $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME, DB_USER, DB_PASS);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    // Get technician's assigned orders (non-completed and non-cancelled)
+    // Get technician's assigned orders (non-completed and non-cancelled) including secondary assignments
     $stmt = $pdo->prepare("
-        SELECT 
+        SELECT DISTINCT
             jo.*,
             COALESCE(am.model_name, 'Not Specified') as model_name 
         FROM job_orders jo 
         LEFT JOIN aircon_models am ON jo.aircon_model_id = am.id 
-        WHERE jo.assigned_technician_id = ? 
+        WHERE (jo.assigned_technician_id = ? OR jo.secondary_technician_id = ?)
         AND jo.status NOT IN ('completed', 'cancelled')
         ORDER BY jo.created_at DESC
     ");
-    $stmt->execute([$_SESSION['user_id']]);
+    $stmt->execute([$_SESSION['user_id'], $_SESSION['user_id']]);
     $assignedOrders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Get completed orders
+    // Get completed orders including secondary assignments
     $stmt = $pdo->prepare("
-        SELECT 
+        SELECT DISTINCT
             jo.*,
             COALESCE(am.model_name, 'Not Specified') as model_name 
         FROM job_orders jo 
         LEFT JOIN aircon_models am ON jo.aircon_model_id = am.id 
-        WHERE jo.assigned_technician_id = ? 
+        WHERE (jo.assigned_technician_id = ? OR jo.secondary_technician_id = ?)
         AND jo.status = 'completed'
         ORDER BY jo.completed_at DESC
     ");
-    $stmt->execute([$_SESSION['user_id']]);
+    $stmt->execute([$_SESSION['user_id'], $_SESSION['user_id']]);
     $completedOrders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Get counts for dashboard cards
+    // Get counts for dashboard cards (including secondary technician assignments)
     $stmt = $pdo->prepare("
         SELECT 
-            COUNT(*) as total,
-            SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
-            SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
-            SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending
-        FROM job_orders 
-        WHERE assigned_technician_id = ?
+            COUNT(DISTINCT jo.id) as total,
+            SUM(CASE WHEN jo.status = 'completed' THEN 1 ELSE 0 END) as completed,
+            SUM(CASE WHEN jo.status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
+            SUM(CASE WHEN jo.status = 'pending' THEN 1 ELSE 0 END) as pending
+        FROM job_orders jo
+        WHERE jo.assigned_technician_id = ? OR jo.secondary_technician_id = ?
     ");
-    $stmt->execute([$_SESSION['user_id']]);
+    $stmt->execute([$_SESSION['user_id'], $_SESSION['user_id']]);
     $counts = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // Get monthly statistics for the chart (all 12 months)
+    // Get monthly statistics for the chart (all 12 months) including secondary assignments
     $stmt = $pdo->prepare("
         WITH RECURSIVE months AS (
             SELECT DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 11 MONTH), '%Y-%m') as month
@@ -172,7 +172,7 @@ try {
         )
         SELECT 
             m.month,
-            COALESCE(COUNT(jo.id), 0) as total_orders,
+            COALESCE(COUNT(DISTINCT jo.id), 0) as total_orders,
             COALESCE(SUM(CASE WHEN jo.status = 'completed' THEN 1 ELSE 0 END), 0) as completed_orders,
             COALESCE(SUM(CASE WHEN jo.status = 'in_progress' THEN 1 ELSE 0 END), 0) as in_progress_orders,
             COALESCE(SUM(CASE WHEN jo.status = 'pending' THEN 1 ELSE 0 END), 0) as pending_orders,
@@ -184,11 +184,11 @@ try {
             END), 0) as avg_completion_time
         FROM months m
         LEFT JOIN job_orders jo ON DATE_FORMAT(jo.created_at, '%Y-%m') = m.month 
-            AND jo.assigned_technician_id = ?
+            AND (jo.assigned_technician_id = ? OR jo.secondary_technician_id = ?)
         GROUP BY m.month
         ORDER BY m.month ASC
     ");
-    $stmt->execute([$_SESSION['user_id']]);
+    $stmt->execute([$_SESSION['user_id'], $_SESSION['user_id']]);
     $monthlyStats = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 
