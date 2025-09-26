@@ -13,15 +13,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME, DB_USER, DB_PASS);
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-        // Generate unique job order number (format: JO-YYYYMMDD-XXXX)
-        do {
-            $job_order_number = 'JO-' . date('Ymd') . '-' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
-            
-            // Check if this job order number already exists
-            $check_stmt = $pdo->prepare("SELECT COUNT(*) FROM job_orders WHERE job_order_number = ?");
-            $check_stmt->execute([$job_order_number]);
-            $exists = $check_stmt->fetchColumn() > 0;
-        } while ($exists);
+        // Generate job order number (format: JO-YYYYMMDD-XXXX)
+        $job_order_number = 'JO-' . date('Ymd') . '-' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
 
         // CUSTOMER HANDLING
         $customer_name = trim($_POST['customer_name']);

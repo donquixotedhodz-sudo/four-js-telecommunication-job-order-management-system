@@ -308,7 +308,7 @@ require_once 'includes/header.php';
                         <div class="col-md-6">
                             <label class="form-label">Customer Name</label>
                             <input type="text" class="form-control" name="customer_name" id="cleaning_customer_name_autocomplete" autocomplete="off" required>
-                            <div id="cleaning_customer_suggestions" class="list-group position-absolute w-100" style="z-index: 1060;"></div>
+                            <div id="cleaning_customer_suggestions" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Phone Number</label>
@@ -429,7 +429,7 @@ require_once 'includes/header.php';
 
     <!-- Add Job Order Modal -->
     <div class="modal fade" id="addJobOrderModal" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Add New Survey Order</h5>
@@ -438,10 +438,6 @@ require_once 'includes/header.php';
                 <form id="surveyOrderForm" action="controller/process_order.php" method="POST">
                     <input type="hidden" name="service_type" id="selected_service_type" required>
                     <div class="modal-body">
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-2"></i>
-                            <strong>Survey Order:</strong> Create a new survey order for aircon installation or repair assessment.
-                        </div>
                         <div class="row g-3">
                             <!-- Customer Information -->
                             <div class="col-md-6">
@@ -925,48 +921,10 @@ require_once 'includes/header.php';
 
             // Update total price when additional fee or discount changes
             if (additionalFeeInput) {
-                additionalFeeInput.addEventListener('input', function() {
-                    calculateSingleTotalPrice();
-                    updateSurveyPriceSummary();
-                });
+                additionalFeeInput.addEventListener('input', calculateSingleTotalPrice);
             }
             if (discountInput) {
-                discountInput.addEventListener('input', function() {
-                    calculateSingleTotalPrice();
-                    updateSurveyPriceSummary();
-                });
-            }
-
-            // Function to update survey price summary
-            function updateSurveyPriceSummary() {
-                const basePrice = parseFloat(basePriceInput ? basePriceInput.value : 0) || 0;
-                const additionalFee = parseFloat(additionalFeeInput ? additionalFeeInput.value : 0) || 0;
-                const discount = parseFloat(discountInput ? discountInput.value : 0) || 0;
-                const total = basePrice + additionalFee - discount;
-                
-                // Update summary displays
-                const summaryBasePrice = document.getElementById('summary_base_price');
-                const summaryAdditionalFee = document.getElementById('summary_additional_fee');
-                const summaryDiscount = document.getElementById('summary_discount');
-                const summaryTotal = document.getElementById('summary_total');
-                
-                if (summaryBasePrice) summaryBasePrice.textContent = '₱' + basePrice.toFixed(2);
-                if (summaryAdditionalFee) summaryAdditionalFee.textContent = '₱' + additionalFee.toFixed(2);
-                if (summaryDiscount) summaryDiscount.textContent = '₱' + discount.toFixed(2);
-                if (summaryTotal) summaryTotal.textContent = '₱' + total.toFixed(2);
-            }
-
-            // Initialize summary on modal open
-            document.getElementById('addJobOrderModal').addEventListener('shown.bs.modal', function() {
-                updateSurveyPriceSummary();
-            });
-
-            // Update summary when base price changes (aircon model selection)
-            if (airconModelSelect) {
-                const originalChangeHandler = airconModelSelect.onchange;
-                airconModelSelect.addEventListener('change', function() {
-                    setTimeout(updateSurveyPriceSummary, 100); // Small delay to ensure base price is updated
-                });
+                discountInput.addEventListener('input', calculateSingleTotalPrice);
             }
 
 
@@ -1138,21 +1096,12 @@ require_once 'includes/header.php';
             const submitBtn = this.querySelector('button[type="submit"]');
             const originalText = submitBtn.innerHTML;
             
-            // Prevent duplicate submissions
-            if (submitBtn.disabled) {
-                e.preventDefault();
-                return false;
-            }
-            
             // Disable button and show loading state
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating Orders...';
             
-            // Re-enable button after a delay in case of errors
-            setTimeout(() => {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
-            }, 5000);
+            // Allow the form to submit normally
+            // The button will be re-enabled when the page reloads or redirects
         });
 
         // Handle survey order form submission with animation
@@ -1160,21 +1109,12 @@ require_once 'includes/header.php';
             const submitBtn = this.querySelector('button[type="submit"]');
             const originalText = submitBtn.innerHTML;
             
-            // Prevent duplicate submissions
-            if (submitBtn.disabled) {
-                e.preventDefault();
-                return false;
-            }
-            
             // Disable button and show loading state
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating Order...';
             
-            // Re-enable button after a delay in case of errors
-            setTimeout(() => {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
-            }, 5000);
+            // Allow the form to submit normally
+            // The button will be re-enabled when the page reloads or redirects
         });
 
         // DYNAMIC LABEL CHANGE FOR AIRCON MODEL/AC PARTS

@@ -38,11 +38,11 @@ try {
 
     $aircon_model_ids = $_POST['aircon_model_id'];
     $base_prices = $_POST['base_price'] ?? [];
-    $total_additional_fee = floatval($_POST['total_additional_fee'] ?? 0);
+    $additional_fees = $_POST['additional_fee'] ?? [];
     $discount = floatval($_POST['discount'] ?? 0);
 
-    // Validate arrays have same length (only aircon_model_ids and base_prices need to match)
-    if (count($aircon_model_ids) !== count($base_prices)) {
+    // Validate arrays have same length
+    if (count($aircon_model_ids) !== count($base_prices) || count($aircon_model_ids) !== count($additional_fees)) {
         $_SESSION['error'] = "Invalid data structure";
         header('Location: ../customer_orders.php?customer_id=' . $_POST['customer_id']);
         exit();
@@ -77,49 +77,25 @@ try {
     }
 
     $created_orders = [];
-    $total_base_price = 0;
-
-    // Calculate total base price first
-    for ($i = 0; $i < count($aircon_model_ids); $i++) {
-        $aircon_model_id = (int)$aircon_model_ids[$i];
-        $base_price = floatval($base_prices[$i] ?? 0);
-        
-        // Skip if no aircon model selected
-        if (empty($aircon_model_id)) {
-            continue;
-        }
-        
-        $total_base_price += $base_price;
-    }
-
-    // Calculate final total price with additional fee and discount
-    $final_total_price = $total_base_price + $total_additional_fee - $discount;
+    $total_price = 0;
 
     // Process each order
     for ($i = 0; $i < count($aircon_model_ids); $i++) {
         $aircon_model_id = (int)$aircon_model_ids[$i];
         $base_price = floatval($base_prices[$i] ?? 0);
+        $additional_fee = floatval($additional_fees[$i] ?? 0);
         
         // Skip if no aircon model selected
         if (empty($aircon_model_id)) {
             continue;
         }
 
-        // Calculate proportional additional fee for this order
-        $proportional_additional_fee = $total_base_price > 0 ? ($base_price / $total_base_price) * $total_additional_fee : 0;
-        
-        // Calculate individual order price (base price + proportional additional fee)
-        $order_price = $base_price + $proportional_additional_fee;
+        // Calculate individual order price
+        $order_price = $base_price + $additional_fee;
+        $total_price += $order_price;
 
-        // Generate unique job order number
-        do {
-            $job_order_number = 'JO-' . date('Ymd') . '-' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
-            
-            // Check if this job order number already exists
-            $check_stmt = $pdo->prepare("SELECT COUNT(*) FROM job_orders WHERE job_order_number = ?");
-            $check_stmt->execute([$job_order_number]);
-            $exists = $check_stmt->fetchColumn() > 0;
-        } while ($exists);
+        // Generate job order number
+        $job_order_number = 'JO-' . date('Ymd') . '-' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
 
         // Insert job order
         $stmt = $pdo->prepare("
@@ -141,7 +117,7 @@ try {
             $assigned_technician_id,
             !empty($_POST['secondary_technician_id']) ? (int)$_POST['secondary_technician_id'] : null,
             $base_price,
-            $proportional_additional_fee,
+            $additional_fee,
             $order_price
         ]);
 
@@ -178,7 +154,7 @@ try {
     $pdo->commit();
 
     // Calculate final total price before sending email
-    $total_final_price = $final_total_price;
+    $total_final_price = $total_price - $discount;
 
     // Send bulk email notification if customer has email
     if (!empty($customer_email)) {

@@ -110,14 +110,7 @@ try {
         $aircon_model_id = (int)$aircon_model_ids[$i];
         
         // Generate unique job order number for each repair order
-        do {
-            $job_order_number = 'JO-' . date('Ymd') . '-' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
-            
-            // Check if this job order number already exists
-            $check_stmt = $pdo->prepare("SELECT COUNT(*) FROM job_orders WHERE job_order_number = ?");
-            $check_stmt->execute([$job_order_number]);
-            $exists = $check_stmt->fetchColumn() > 0;
-        } while ($exists);
+        $job_order_number = 'JO-' . date('Ymd') . '-' . str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
         
         // Calculate individual order total (discount and additional fee are applied proportionally)
         $order_subtotal = $base_price;
