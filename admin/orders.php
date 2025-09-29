@@ -438,6 +438,10 @@ require_once 'includes/header.php';
                 <form id="surveyOrderForm" action="controller/process_order.php" method="POST">
                     <input type="hidden" name="service_type" id="selected_service_type" required>
                     <div class="modal-body">
+                        <div class="alert alert-info bulk-order-alert">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Survey Order:</strong> Create a survey order to assess customer requirements and provide estimates.
+                        </div>
                         <div class="row g-3">
                             <!-- Customer Information -->
                             <div class="col-md-6">
@@ -512,10 +516,33 @@ require_once 'includes/header.php';
                                 <input type="number" class="form-control" name="price" id="total_price" readonly>
                             </div>
                         </div>
+                        
+                        <!-- Price Summary -->
+                        <div class="price-summary">
+                            <h6><i class="fas fa-calculator me-2"></i>Price Summary</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <small class="text-muted">Base Price:</small>
+                                    <div class="fw-bold" id="survey_summary_base_price">₱0.00</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted">Additional Fees:</small>
+                                    <div class="fw-bold" id="survey_summary_additional_fee">₱0.00</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted">Discount:</small>
+                                    <div class="fw-bold text-danger" id="survey_summary_discount">₱0.00</div>
+                                </div>
+                                <div class="col-md-12 mt-2">
+                                    <small class="text-muted">Total Price:</small>
+                                    <div class="fw-bold text-success fs-5" id="survey_summary_total">₱0.00</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Create Survey Order</button>
+                        <button type="submit" class="btn btn-info">Create Survey Order</button>
                     </div>
                 </form>
             </div>
@@ -900,6 +927,22 @@ require_once 'includes/header.php';
                 if (totalPriceInput) {
                     totalPriceInput.value = total.toFixed(2);
                 }
+                
+                // Update price summary fields
+                updateSurveyPriceSummary(basePrice, additionalFee, discount, total);
+            }
+            
+            // Function to update survey price summary
+            function updateSurveyPriceSummary(basePrice, additionalFee, discount, total) {
+                const summaryBasePrice = document.getElementById('survey_summary_base_price');
+                const summaryAdditionalFee = document.getElementById('survey_summary_additional_fee');
+                const summaryDiscount = document.getElementById('survey_summary_discount');
+                const summaryTotal = document.getElementById('survey_summary_total');
+                
+                if (summaryBasePrice) summaryBasePrice.textContent = '₱' + basePrice.toFixed(2);
+                if (summaryAdditionalFee) summaryAdditionalFee.textContent = '₱' + additionalFee.toFixed(2);
+                if (summaryDiscount) summaryDiscount.textContent = '₱' + discount.toFixed(2);
+                if (summaryTotal) summaryTotal.textContent = '₱' + total.toFixed(2);
             }
 
             // Make calculateSingleTotalPrice available globally
@@ -1225,6 +1268,11 @@ require_once 'includes/header.php';
         }
         
         #cleaningOrderModal .modal-body {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        
+        #addJobOrderModal .modal-body {
             max-height: 70vh;
             overflow-y: auto;
         }
