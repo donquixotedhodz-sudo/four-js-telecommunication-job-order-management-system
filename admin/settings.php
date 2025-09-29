@@ -284,6 +284,89 @@ require_once 'includes/header.php';
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <!-- <script src="../../js/dashboard.js"></script> -->
 
+    <style>
+        /* Delete notification modal styles */
+        .delete-notification-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .delete-notification-overlay.show {
+            opacity: 1;
+        }
+
+        .delete-notification-modal {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 90%;
+            transform: scale(0.7);
+            transition: transform 0.3s ease;
+        }
+
+        .delete-notification-modal.show {
+            transform: scale(1);
+        }
+
+        .delete-notification-header {
+            padding: 20px 20px 0 20px;
+            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 0;
+        }
+
+        .delete-notification-header h5 {
+            margin: 0;
+            color: #dc3545;
+            font-weight: 600;
+            padding-bottom: 15px;
+        }
+
+        .delete-notification-body {
+            padding: 20px;
+        }
+
+        .delete-notification-body p {
+            margin: 0;
+            color: #6c757d;
+            line-height: 1.5;
+        }
+
+        .delete-notification-footer {
+            padding: 0 20px 20px 20px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        /* Animation keyframes */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { 
+                transform: scale(0.7);
+                opacity: 0;
+            }
+            to { 
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+    </style>
+
     <script>
         // Password toggle functionality for create admin modal
         const adminPasswordInput = document.getElementById('adminPassword');
@@ -323,12 +406,66 @@ require_once 'includes/header.php';
             this.querySelector('i').classList.toggle('fa-eye-slash');
         });
 
-        // Confirm delete function
-        function confirmDelete(id) {
-            if (confirm('Are you sure you want to delete this admin?')) {
+        // Custom delete notification function
+        function showDeleteNotification(id) {
+            // Create overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'delete-notification-overlay';
+            
+            // Create modal
+            const modal = document.createElement('div');
+            modal.className = 'delete-notification-modal';
+            
+            // Create header
+            const header = document.createElement('div');
+            header.className = 'delete-notification-header';
+            header.innerHTML = '<h5>Confirm Deletion</h5>';
+            
+            // Create body
+            const body = document.createElement('div');
+            body.className = 'delete-notification-body';
+            body.innerHTML = '<p>Are you sure you want to delete this admin?</p>';
+            
+            // Create footer with buttons
+            const footer = document.createElement('div');
+            footer.className = 'delete-notification-footer';
+            
+            const cancelBtn = document.createElement('button');
+            cancelBtn.textContent = 'Cancel';
+            cancelBtn.className = 'btn btn-secondary me-2';
+            cancelBtn.onclick = () => document.body.removeChild(overlay);
+            
+            const confirmBtn = document.createElement('button');
+            confirmBtn.textContent = 'Delete';
+            confirmBtn.className = 'btn btn-danger';
+            confirmBtn.onclick = () => {
                 document.getElementById('deleteAdminId').value = id;
                 document.getElementById('deleteForm').submit();
-            }
+                document.body.removeChild(overlay);
+            };
+            
+            footer.appendChild(cancelBtn);
+            footer.appendChild(confirmBtn);
+            
+            // Assemble modal
+            modal.appendChild(header);
+            modal.appendChild(body);
+            modal.appendChild(footer);
+            overlay.appendChild(modal);
+            
+            // Add to page
+            document.body.appendChild(overlay);
+            
+            // Trigger animations
+            setTimeout(() => {
+                overlay.classList.add('show');
+                modal.classList.add('show');
+            }, 10);
+        }
+
+        // Confirm delete function
+        function confirmDelete(id) {
+            showDeleteNotification(id);
         }
 
         // Make confirmDelete function global

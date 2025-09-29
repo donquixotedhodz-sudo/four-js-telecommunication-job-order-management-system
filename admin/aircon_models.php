@@ -73,7 +73,7 @@ try {
     }
 
     // Fetch all aircon models
-    $stmt = $pdo->query("SELECT * FROM aircon_models ORDER BY id DESC");
+    $stmt = $pdo->query("SELECT DISTINCT * FROM aircon_models ORDER BY id DESC");
     $airconModels = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
@@ -265,15 +265,132 @@ require_once 'includes/header.php';
             return new bootstrap.Tooltip(tooltipTriggerEl)
         })
 
-        function confirmDelete(id) {
-            if (confirm('Are you sure you want to delete this model?')) {
+        // Function to show custom delete notification
+        function showDeleteNotification(id) {
+            // Create notification overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'delete-notification-overlay';
+            overlay.innerHTML = `
+                <div class="delete-notification-modal">
+                    <div class="delete-notification-header">
+                        <i class="fas fa-exclamation-triangle text-warning"></i>
+                        <h5>Delete Aircon Model</h5>
+                    </div>
+                    <div class="delete-notification-body">
+                        <p>Are you sure you want to delete this model? This action cannot be undone.</p>
+                    </div>
+                    <div class="delete-notification-footer">
+                        <button type="button" class="btn btn-secondary delete-notification-no">Cancel</button>
+                        <button type="button" class="btn btn-danger delete-notification-yes">OK</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(overlay);
+            
+            // Handle button clicks
+            overlay.querySelector('.delete-notification-yes').addEventListener('click', function() {
+                document.body.removeChild(overlay);
                 document.getElementById('deleteModelId').value = id;
                 document.getElementById('deleteForm').submit();
-            }
+            });
+            
+            overlay.querySelector('.delete-notification-no').addEventListener('click', function() {
+                document.body.removeChild(overlay);
+            });
+            
+            // Close on overlay click
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) {
+                    document.body.removeChild(overlay);
+                }
+            });
+        }
+
+        function confirmDelete(id) {
+            showDeleteNotification(id);
         }
     </script>
 
     <style>
+        /* Custom delete notification modal styles */
+        .delete-notification-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .delete-notification-modal {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            max-width: 400px;
+            width: 90%;
+            animation: slideIn 0.3s ease;
+        }
+
+        .delete-notification-header {
+            padding: 20px 20px 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .delete-notification-header i {
+            font-size: 24px;
+        }
+
+        .delete-notification-header h5 {
+            margin: 0;
+            color: #495057;
+        }
+
+        .delete-notification-body {
+            padding: 20px;
+        }
+
+        .delete-notification-body p {
+            margin: 0;
+            color: #6c757d;
+            line-height: 1.5;
+        }
+
+        .delete-notification-footer {
+            padding: 15px 20px 20px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .delete-notification-footer .btn {
+            min-width: 100px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { 
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         @media print {
             /* Hide screen elements */
             .navbar, .sidebar, .btn, .card-header, .form-control, .form-select, 

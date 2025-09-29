@@ -384,15 +384,55 @@ require_once 'includes/header.php';
             return new bootstrap.Tooltip(tooltipTriggerEl)
         })
 
-        function confirmDelete(id) {
-            if (confirm('Are you sure you want to delete this service?')) {
-                document.getElementById('deleteServiceId').value = id;
-                document.getElementById('deleteForm').submit();
+        function showDeleteNotification(id, type = 'service') {
+            // Create overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'delete-notification-overlay';
+            
+            // Create modal
+            const modal = document.createElement('div');
+            modal.className = 'delete-notification-modal';
+            
+            // Create modal content
+            modal.innerHTML = `
+                <div class="delete-notification-header">
+                    <h5>Confirm Deletion</h5>
+                </div>
+                <div class="delete-notification-body">
+                    <p>Are you sure you want to delete this ${type === 'service' ? 'cleaning service' : 'HP entry'}? This action cannot be undone.</p>
+                </div>
+                <div class="delete-notification-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeDeleteNotification()">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmDeletion(${id}, '${type}')">Delete</button>
+                </div>
+            `;
+            
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+            
+            // Show with animation
+            setTimeout(() => {
+                overlay.classList.add('show');
+                modal.classList.add('show');
+            }, 10);
+        }
+
+        function closeDeleteNotification() {
+            const overlay = document.querySelector('.delete-notification-overlay');
+            if (overlay) {
+                overlay.classList.remove('show');
+                overlay.querySelector('.delete-notification-modal').classList.remove('show');
+                setTimeout(() => {
+                    document.body.removeChild(overlay);
+                }, 300);
             }
         }
 
-        function confirmDeleteHp(id) {
-            if (confirm('Are you sure you want to delete this HP entry?')) {
+        function confirmDeletion(id, type) {
+            if (type === 'service') {
+                document.getElementById('deleteServiceId').value = id;
+                document.getElementById('deleteForm').submit();
+            } else if (type === 'hp') {
                 // Create a temporary form to submit the delete request
                 const form = document.createElement('form');
                 form.method = 'post';
@@ -413,10 +453,100 @@ require_once 'includes/header.php';
                 document.body.appendChild(form);
                 form.submit();
             }
+            closeDeleteNotification();
+        }
+
+        function confirmDelete(id) {
+            showDeleteNotification(id, 'service');
+        }
+
+        function confirmDeleteHp(id) {
+            showDeleteNotification(id, 'hp');
         }
     </script>
 
     <style>
+        /* Delete notification modal styles */
+        .delete-notification-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .delete-notification-overlay.show {
+            opacity: 1;
+        }
+
+        .delete-notification-modal {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 90%;
+            transform: scale(0.7);
+            transition: transform 0.3s ease;
+        }
+
+        .delete-notification-modal.show {
+            transform: scale(1);
+        }
+
+        .delete-notification-header {
+            padding: 20px 20px 0 20px;
+            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 0;
+        }
+
+        .delete-notification-header h5 {
+            margin: 0;
+            color: #dc3545;
+            font-weight: 600;
+            padding-bottom: 15px;
+        }
+
+        .delete-notification-body {
+            padding: 20px;
+        }
+
+        .delete-notification-body p {
+            margin: 0;
+            color: #6c757d;
+            line-height: 1.5;
+        }
+
+        .delete-notification-footer {
+            padding: 0 20px 20px 20px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        /* Animation keyframes */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { 
+                transform: scale(0.7);
+                opacity: 0;
+            }
+            to { 
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
         @media print {
             /* Hide screen elements */
             .navbar, .sidebar, .btn, .card-header, .form-control, .form-select, 
@@ -556,10 +686,7 @@ require_once 'includes/header.php';
 
     <script>
         function confirmDelete(serviceId) {
-            if (confirm('Are you sure you want to delete this cleaning service?')) {
-                document.getElementById('deleteServiceId').value = serviceId;
-                document.getElementById('deleteForm').submit();
-            }
+            showDeleteNotification(serviceId, 'service');
         }
     </script>
 </body>

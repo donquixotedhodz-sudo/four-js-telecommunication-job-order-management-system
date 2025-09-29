@@ -29,8 +29,10 @@ $categories_stmt = $pdo->prepare("SELECT * FROM part_categories WHERE is_active 
 $categories_stmt->execute();
 $categories = $categories_stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Fetch AC parts with category names
-$parts_query = "SELECT p.*, c.category_name FROM ac_parts p LEFT JOIN part_categories c ON p.category_id = c.id";
+// Fetch AC parts with category names (using DISTINCT to prevent duplicates)
+$parts_query = "SELECT DISTINCT p.id, p.part_name, p.part_code, p.category_id, p.unit_price, p.labor_cost, p.warranty_months, p.created_at, p.updated_at, c.category_name 
+                FROM ac_parts p 
+                LEFT JOIN part_categories c ON p.category_id = c.id";
 if ($part_category) {
     $parts_query .= " WHERE c.category_name = :part_category";
 }
@@ -85,6 +87,119 @@ require_once 'includes/header.php';
     .tab-content {
         background-color: #fff;
         border-radius: 0 0 0.5rem 0.5rem;
+    }
+    
+    /* Delete Notification Modal Styles */
+    .delete-notification-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 9999;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .delete-notification-overlay.show {
+        opacity: 1;
+    }
+
+    .delete-notification-modal {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        max-width: 500px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+        transform: scale(0.7) translateY(-50px);
+        transition: all 0.3s ease;
+        animation: slideIn 0.3s ease forwards;
+    }
+
+    .delete-notification-modal.show {
+        transform: scale(1) translateY(0);
+    }
+
+    .delete-notification-header {
+        padding: 20px 24px 0;
+        border-bottom: 1px solid #e9ecef;
+        margin-bottom: 0;
+    }
+
+    .delete-notification-header h5 {
+        margin: 0;
+        color: #dc3545;
+        font-weight: 600;
+        font-size: 1.25rem;
+    }
+
+    .delete-notification-body {
+        padding: 20px 24px;
+        color: #6c757d;
+        line-height: 1.6;
+    }
+
+    .delete-notification-body p {
+        margin: 0;
+        font-size: 1rem;
+    }
+
+    .delete-notification-footer {
+        padding: 0 24px 20px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+    }
+
+    .delete-notification-footer .btn {
+        padding: 8px 20px;
+        border-radius: 6px;
+        font-weight: 500;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .delete-notification-footer .btn-secondary {
+        background-color: #6c757d;
+        color: white;
+    }
+
+    .delete-notification-footer .btn-secondary:hover {
+        background-color: #5a6268;
+        transform: translateY(-1px);
+    }
+
+    .delete-notification-footer .btn-danger {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .delete-notification-footer .btn-danger:hover {
+        background-color: #c82333;
+        transform: translateY(-1px);
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: scale(0.7) translateY(-50px);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
     }
 </style>
 <body>
@@ -563,34 +678,101 @@ require_once 'includes/header.php';
             });
         }
 
-        function deleteCategory(id, name) {
-            if (!confirm(`Are you sure you want to delete the category "${name}"?`)) {
-                return;
+        function showDeleteNotification(id, name, type = 'part') {
+            // Create overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'delete-notification-overlay';
+            
+            // Create modal
+            const modal = document.createElement('div');
+            modal.className = 'delete-notification-modal';
+            
+            // Create modal content
+            modal.innerHTML = `
+                <div class="delete-notification-header">
+                    <h5>Confirm Deletion</h5>
+                </div>
+                <div class="delete-notification-body">
+                    <p>Are you sure you want to delete the ${type} "${name}"? This action cannot be undone.</p>
+                </div>
+                <div class="delete-notification-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeDeleteNotification()">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmDeletion(${id}, '${name}', '${type}')">Delete</button>
+                </div>
+            `;
+            
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+            
+            // Show with animation
+            setTimeout(() => {
+                overlay.classList.add('show');
+                modal.classList.add('show');
+            }, 10);
+        }
+
+        function closeDeleteNotification() {
+            const overlay = document.querySelector('.delete-notification-overlay');
+            if (overlay) {
+                overlay.classList.remove('show');
+                overlay.querySelector('.delete-notification-modal').classList.remove('show');
+                setTimeout(() => {
+                    document.body.removeChild(overlay);
+                }, 300);
             }
-            
-            const formData = new FormData();
-            formData.append('action', 'delete');
-            formData.append('type', 'category');
-            formData.append('category_id', id);
-            
-            fetch('controller/parts_management_controller.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showAlert('success', 'Category deleted successfully!');
-                    setTimeout(() => location.reload(), 1500);
-                } else {
-                    showAlert('danger', 'Error: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showAlert('danger', 'An error occurred while deleting the category');
-            });
-         }
+        }
+
+        function confirmDeletion(id, name, type) {
+            if (type === 'category') {
+                const formData = new FormData();
+                formData.append('action', 'delete');
+                formData.append('type', 'category');
+                formData.append('category_id', id);
+                
+                fetch('controller/parts_management_controller.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('success', 'Category deleted successfully!');
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        showAlert('danger', 'Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    showAlert('danger', 'Error deleting category');
+                    console.error('Error:', error);
+                });
+            } else if (type === 'part') {
+                fetch('controller/parts_management_controller.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'action=delete&type=part&id=' + id
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Error deleting part');
+                    console.error('Error:', error);
+                });
+            }
+            closeDeleteNotification();
+        }
+
+        function deleteCategory(id, name) {
+            showDeleteNotification(id, name, 'category');
+        }
 
          // Function to show alert messages
          function showAlert(type, message) {
@@ -715,27 +897,7 @@ require_once 'includes/header.php';
 
         // Delete function
         function deletePart(id, name) {
-            if (confirm(`Are you sure you want to delete the part "${name}"?`)) {
-                fetch('controller/parts_management_controller.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: 'action=delete&type=part&id=' + id
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        location.reload();
-                    } else {
-                        alert('Error: ' + data.message);
-                    }
-                })
-                .catch(error => {
-                    alert('Error deleting part');
-                    console.error('Error:', error);
-                });
-            }
+            showDeleteNotification(id, name, 'part');
         }
     </script>
 </body>

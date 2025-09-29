@@ -62,6 +62,14 @@ function handleCreate($pdo, $type) {
             return;
         }
 
+        // Check if part name already exists in the same category
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM ac_parts WHERE part_name = ? AND category_id = ?");
+        $stmt->execute([$part_name, $category_id]);
+        if ($stmt->fetchColumn() > 0) {
+            echo json_encode(['success' => false, 'message' => 'A part with this name already exists in the selected category.']);
+            return;
+        }
+
         // Check if part code already exists
         if (!empty($part_code)) {
             $stmt = $pdo->prepare("SELECT COUNT(*) FROM ac_parts WHERE part_code = ?");
@@ -142,6 +150,14 @@ function handleUpdate($pdo, $type) {
         $stmt->execute([$id]);
         if ($stmt->fetchColumn() == 0) {
             echo json_encode(['success' => false, 'message' => 'Part not found.']);
+            return;
+        }
+
+        // Check if part name already exists in the same category for another part
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM ac_parts WHERE part_name = ? AND category_id = ? AND id != ?");
+        $stmt->execute([$part_name, $category_id, $id]);
+        if ($stmt->fetchColumn() > 0) {
+            echo json_encode(['success' => false, 'message' => 'A part with this name already exists in the selected category.']);
             return;
         }
 
